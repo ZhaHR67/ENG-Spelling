@@ -1,1 +1,426 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Volume2, 
+  Play, 
+  ArrowLeft, 
+  BookOpen, 
+  ChevronRight, 
+  Trophy, 
+  ArrowRight, 
+  ListFilter, 
+  CheckCircle2, 
+  FileText, 
+  Settings,
+  Shuffle,
+  Gauge,
+  ChevronDown,
+  Type,
+  AlignLeft
+} from 'lucide-react';
 
+// Organized Lesson Data with Sentences
+const P5_LESSONS = {
+  "Lesson 1": [
+    { word: "Accommodate", sentence: "The new stadium is designed to accommodate more than fifty thousand fans." },
+    { word: "Beginning", sentence: "The beginning of the movie was so exciting that everyone was quiet." },
+    { word: "Business", sentence: "My uncle decided to start his own business selling handmade furniture." },
+    { word: "Calendar", sentence: "Please check the school calendar to find out when the holidays start." },
+    { word: "Committee", sentence: "The organizing committee met today to plan the upcoming sports day." }
+  ],
+  "Lesson 2": [
+    { word: "Definitely", sentence: "We are definitely going to the park if the weather stays sunny." },
+    { word: "Environment", sentence: "It is our responsibility to protect the environment for future generations." },
+    { word: "Familiar", sentence: "The melody of that song sounds very familiar, but I cannot remember the name." },
+    { word: "Government", sentence: "The local government is building a new library in our neighborhood." },
+    { word: "Immediately", sentence: "You must come home immediately after your football practice ends." }
+  ],
+  "Lesson 3": [
+    { word: "Interrupt", sentence: "Please do not interrupt the teacher while she is explaining the instructions." },
+    { word: "Language", sentence: "Learning a new language is a great way to understand different cultures." },
+    { word: "Necessary", sentence: "It is necessary to bring your own water bottle for the hiking trip." },
+    { word: "Occurred", sentence: "A strange idea occurred to me while I was reading that mystery book." },
+    { word: "Possession", sentence: "The old locket is my grandmother's most prized possession." }
+  ],
+  "Lesson 4": [
+    { word: "Recommend", sentence: "I highly recommend this book to anyone who loves science fiction." },
+    { word: "Separate", sentence: "The two brothers decided to sleep in separate rooms from now on." },
+    { word: "Successful", sentence: "Hard work and perseverance are the keys to a successful career." },
+    { word: "Tomorrow", sentence: "We will be visiting the national museum tomorrow morning." },
+    { word: "Unfortunately", sentence: "Unfortunately, the outdoor concert was cancelled due to heavy rain." }
+  ]
+};
+
+// Logo Component using the local vpslogo.jpeg file
+const Logo = () => (
+  <div className="relative w-40 h-40 mx-auto mb-8 flex items-center justify-center">
+    <div className="w-full h-full rounded-3xl overflow-hidden shadow-xl bg-white flex items-center justify-center border-4 border-indigo-50">
+      <img 
+        src="vpslogo.jpeg" 
+        alt="P5 Dictation Logo" 
+        className="max-w-full max-h-full object-contain"
+        onError={(e) => {
+          // If the local file isn't found, show a styled placeholder
+          e.target.onerror = null; 
+          e.target.src = "https://via.placeholder.com/225?text=VPS+Dictation";
+        }}
+      />
+    </div>
+    <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-indigo-900 text-xs font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-tight ring-4 ring-white">
+      Master
+    </div>
+  </div>
+);
+
+const App = () => {
+  const [view, setView] = useState('home'); 
+  const [currentLesson, setCurrentLesson] = useState(null);
+  const [words, setWords] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [speed, setSpeed] = useState(0.8);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(true);
+  const [dictationMode, setDictationMode] = useState('word'); // 'word' or 'sentence'
+
+  const speak = (text) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = speed;
+    utterance.lang = 'en-US';
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Helper to explicitly speak punctuation marks for sentence mode
+  const getSentenceWithPunctuation = (str) => {
+    return str
+      .replace(/\./g, ' full stop')
+      .replace(/,/g, ' comma')
+      .replace(/!/g, ' exclamation mark')
+      .replace(/\?/g, ' question mark')
+      .replace(/;/g, ' semi-colon')
+      .replace(/:/g, ' colon');
+  };
+
+  const handleDictationSpeak = (item) => {
+    if (!item) return;
+    if (dictationMode === 'word') {
+      const fullPrompt = `${item.sentence}. How do you spell... ${item.word}?`;
+      speak(fullPrompt);
+    } else {
+      const punctuatedSentence = getSentenceWithPunctuation(item.sentence);
+      speak(punctuatedSentence);
+    }
+  };
+
+  const selectLesson = (lessonName) => {
+    setCurrentLesson(lessonName);
+    setWords(P5_LESSONS[lessonName]);
+    setView('preview');
+  };
+
+  const startLesson = () => {
+    let finalWords = [...P5_LESSONS[currentLesson]];
+    if (isShuffle) {
+      finalWords = finalWords.sort(() => Math.random() - 0.5);
+    }
+    setWords(finalWords);
+    setCurrentIndex(0);
+    setView('practice');
+    setTimeout(() => handleDictationSpeak(finalWords[0]), 600);
+  };
+
+  const nextWord = () => {
+    if (currentIndex < words.length - 1) {
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
+      handleDictationSpeak(words[nextIdx]);
+    } else {
+      setView('result');
+    }
+  };
+
+  const renderHome = () => (
+    <div className="flex flex-col min-h-screen p-6 animate-in fade-in duration-500 max-w-lg mx-auto justify-center">
+      <div className="text-center mb-12">
+        <Logo />
+        <h1 className="text-5xl font-black text-slate-800 mb-3 leading-tight tracking-tight">
+          P5 Dictation
+        </h1>
+        <p className="text-slate-500 text-lg px-4 leading-relaxed">
+          The ultimate companion for your weekly spelling and sentence practice.
+        </p>
+      </div>
+
+      <button
+        onClick={() => setView('lessons')}
+        className="w-full bg-indigo-600 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform"
+      >
+        Start Practice <ArrowRight size={24} />
+      </button>
+
+      <div className="mt-12 text-center">
+        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+          Prepare paper & pen
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderLessons = () => (
+    <div className="flex flex-col min-h-screen p-6 animate-in slide-in-from-right duration-300 max-w-lg mx-auto">
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={() => setView('home')} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-colors">
+          <ArrowLeft size={20} />
+        </button>
+        <h2 className="text-2xl font-black text-slate-800">Select Lesson</h2>
+      </div>
+
+      <div className="grid gap-4">
+        {Object.keys(P5_LESSONS).map((lesson) => (
+          <button
+            key={lesson}
+            onClick={() => selectLesson(lesson)}
+            className="w-full bg-white border-2 border-slate-100 p-6 rounded-2xl flex items-center justify-between group active:border-indigo-500 active:bg-indigo-50 transition-all shadow-sm"
+          >
+            <div className="text-left">
+              <div className="font-black text-slate-800 text-lg">{lesson}</div>
+              <div className="text-slate-400 text-sm font-medium">{P5_LESSONS[lesson].length} Items</div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-active:bg-indigo-600 group-active:text-white transition-colors">
+              <ChevronRight size={20} />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderPreview = () => (
+    <div className="flex flex-col min-h-screen p-6 animate-in slide-in-from-right duration-300 max-w-lg mx-auto">
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={() => setView('lessons')} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-colors">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h2 className="text-2xl font-black text-slate-800">{currentLesson}</h2>
+          <p className="text-slate-400 font-medium text-sm">Review words & sentences</p>
+        </div>
+      </div>
+
+      {/* Mode Selection Toggles */}
+      <div className="space-y-3 mb-6">
+        <div className="flex bg-slate-100 p-1 rounded-2xl">
+          <button 
+            onClick={() => setIsShuffle(false)}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${!isShuffle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+          >
+            <ListFilter size={18} /> In Order
+          </button>
+          <button 
+            onClick={() => setIsShuffle(true)}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${isShuffle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+          >
+            <Shuffle size={18} /> Shuffle
+          </button>
+        </div>
+
+        <div className="flex bg-slate-100 p-1 rounded-2xl">
+          <button 
+            onClick={() => setDictationMode('word')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${dictationMode === 'word' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+          >
+            <Type size={18} /> Word Mode
+          </button>
+          <button 
+            onClick={() => setDictationMode('sentence')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${dictationMode === 'sentence' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+          >
+            <AlignLeft size={18} /> Sentence Mode
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto mb-6 pr-1 space-y-4">
+        {P5_LESSONS[currentLesson].map((item, idx) => (
+          <div key={idx} className="bg-white border-2 border-slate-50 p-5 rounded-2xl shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-indigo-600 font-black text-lg">{item.word}</span>
+              <button 
+                onClick={() => speak(item.word)} 
+                className="p-2 bg-indigo-50 text-indigo-600 rounded-lg active:scale-90 transition-transform"
+              >
+                <Volume2 size={18} />
+              </button>
+            </div>
+            <p className="text-slate-500 text-sm italic leading-relaxed">
+              "{item.sentence}"
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={startLesson}
+        className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform"
+      >
+        Start Dictation <Play size={24} className="fill-current" />
+      </button>
+    </div>
+  );
+
+  const renderPractice = () => (
+    <div className="flex flex-col min-h-screen bg-white md:bg-slate-50">
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-4 flex justify-between items-center border-b border-slate-100">
+        <button 
+          onClick={() => setView('preview')}
+          className="p-2 text-slate-400 hover:text-slate-800 transition-colors"
+        >
+          <ArrowLeft size={24} />
+        </button>
+        
+        <div className="flex flex-col items-center text-center px-2 flex-1 min-w-0">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate w-full px-2">
+            {currentLesson} • {dictationMode === 'word' ? 'Word' : 'Sentence'}
+          </span>
+          <span className="text-sm font-black text-slate-800">Item {currentIndex + 1} of {words.length}</span>
+        </div>
+
+        {/* Compact Speed Setting */}
+        <div className="flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-1.5 rounded-xl shadow-sm relative">
+          <Gauge size={14} className="text-slate-400 shrink-0" />
+          <select 
+            value={speed.toString()} 
+            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+            className="bg-transparent text-[11px] font-black text-indigo-600 outline-none cursor-pointer pr-4 appearance-none z-10"
+          >
+            <option value="0.5">0.5x</option>
+            <option value="0.8">0.8x</option>
+            <option value="1">1.0x</option>
+          </select>
+          <ChevronDown size={10} className="absolute right-2 text-indigo-400 pointer-events-none" />
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col p-6 max-w-lg mx-auto w-full">
+        {/* Instruction Message */}
+        <div className="text-center mt-4 mb-2 animate-pulse">
+            <p className="text-indigo-600 font-bold text-sm uppercase tracking-tighter">Writing on paper...</p>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center py-6">
+          <button
+            onClick={() => handleDictationSpeak(words[currentIndex])}
+            className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all ${
+              isSpeaking ? 'bg-indigo-100 scale-110 shadow-inner' : 'bg-indigo-600 shadow-xl shadow-indigo-200 active:scale-90'
+            }`}
+          >
+            {isSpeaking ? (
+              <div className="flex gap-1.5 items-end h-12">
+                <div className="w-2 bg-indigo-600 rounded-full animate-[bounce_1s_infinite_0ms]" style={{height: '60%'}}></div>
+                <div className="w-2 bg-indigo-600 rounded-full animate-[bounce_1s_infinite_200ms]" style={{height: '100%'}}></div>
+                <div className="w-2 bg-indigo-600 rounded-full animate-[bounce_1s_infinite_400ms]" style={{height: '70%'}}></div>
+              </div>
+            ) : (
+              <Volume2 size={64} className="text-white" />
+            )}
+          </button>
+          <p className="mt-8 text-slate-400 font-bold uppercase tracking-widest text-xs text-center px-8">
+            {dictationMode === 'word' ? 'Tap for sentence & word' : 'Tap for sentence with punctuations'}
+          </p>
+        </div>
+
+        <div className="pb-12">
+            <button
+                type="button"
+                onClick={nextWord}
+                className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-bold text-xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-slate-200"
+            >
+                {currentIndex < words.length - 1 ? (
+                    <>Next Item <ArrowRight size={24} /></>
+                ) : (
+                    <>Finish & Check Results <CheckCircle2 size={24} /></>
+                )}
+            </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderResult = () => {
+    return (
+      <div className="min-h-screen flex flex-col p-6 bg-slate-50 animate-in zoom-in-95">
+        <div className="w-full max-w-lg mx-auto bg-white rounded-[2.5rem] shadow-2xl p-8 border border-white flex-1 flex flex-col">
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <FileText size={32} />
+          </div>
+          
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-black text-slate-800 mb-1">Answer Key</h2>
+            <p className="text-slate-400 font-medium">Check your paper spelling against the list below.</p>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 mb-8">
+            {words.map((item, idx) => (
+                <div key={idx} className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+                    <div className="flex items-center gap-4 p-4">
+                      <span className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
+                          {idx + 1}
+                      </span>
+                      <span className="text-xl font-black text-slate-800">{item.word}</span>
+                      <button onClick={() => speak(item.word)} className="ml-auto text-indigo-300">
+                          <Volume2 size={18} />
+                      </button>
+                    </div>
+                    {dictationMode === 'sentence' && (
+                      <div className="px-4 pb-4">
+                        <p className="text-xs text-slate-500 italic border-t border-slate-200 pt-2 leading-relaxed">
+                          "{item.sentence}"
+                        </p>
+                      </div>
+                    )}
+                </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => startLesson()}
+              className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100"
+            >
+              Try This Lesson Again
+            </button>
+            <button
+              onClick={() => setView('lessons')}
+              className="w-full bg-white text-slate-500 py-4 rounded-2xl font-bold text-lg border border-slate-200 active:bg-slate-50 transition-all"
+            >
+              Back to Lessons
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-white md:bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden">
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: scaleY(1); }
+          50% { transform: scaleY(0.4); }
+        }
+      `}</style>
+      {view === 'home' && renderHome()}
+      {view === 'lessons' && renderLessons()}
+      {view === 'preview' && renderPreview()}
+      {view === 'practice' && renderPractice()}
+      {view === 'result' && renderResult()}
+    </div>
+  );
+};
+
+export default App;
