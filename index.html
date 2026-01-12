@@ -116,7 +116,7 @@
         function handleDictationSpeak(item) {
             if (!item) return;
             if (state.dictationMode === 'word') {
-                const fullPrompt = `${item.sentence}. How do you spell... ${item.word}?`;
+                const fullPrompt = `${item.sentence}. Spell... ${item.word}?`;
                 speak(fullPrompt);
             } else {
                 const punctuatedSentence = getSentenceWithPunctuation(item.sentence);
