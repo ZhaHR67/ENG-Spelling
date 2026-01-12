@@ -15,12 +15,14 @@
             animation: bounceCustom 1s infinite;
         }
         .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
+            animation: fadeIn 0.4s ease-out;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Remove default blue highlight on mobile tap */
+        * { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
 <body class="bg-white md:bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden min-h-screen">
@@ -37,7 +39,7 @@
                 { word: "smirked", sentence: "Bruce smirked as he watched his mischievous prank unfold." },
                 { word: "surrounded", sentence: "The robber found himself quickly surrounded by the police." },
                 { word: "yelped in pain", sentence: "The poor dog yelped in pain as it was struck by a falling branch." },
-                { word: "forlonly", sentence: "The lost child stoof forlonly in the middle of the shopping mall." },
+                { word: "forlornly", sentence: "The lost child stood forlornly in the middle of the shopping mall." },
                 { word: "rowdy", sentence: "There was a rowdy gang of youths milling about at the void deck." },
                 { word: "hesitant", sentence: "We were hesitant about spending so much money on a single meal." },
                 { word: "stationery", sentence: "I bought a new set of stationery from the bookshop at the start of the term." }
@@ -61,7 +63,7 @@
                 { word: "smirked", sentence: "Bruce smirked as he watched his mischievous prank unfold." },
                 { word: "surrounded", sentence: "The robber found himself quickly surrounded by the police." },
                 { word: "yelped in pain", sentence: "The poor dog yelped in pain as it was struck by a falling branch." },
-                { word: "forlonly", sentence: "The lost child stoof forlonly in the middle of the shopping mall." },
+                { word: "forlornly", sentence: "The lost child stood forlornly in the middle of the shopping mall." },
                 { word: "rowdy", sentence: "There was a rowdy gang of youths milling about at the void deck." },
                 { word: "hesitant", sentence: "We were hesitant about spending so much money on a single meal." },
                 { word: "stationery", sentence: "I bought a new set of stationery from the bookshop at the start of the term." }
@@ -73,7 +75,7 @@
                 { word: "smirked", sentence: "Bruce smirked as he watched his mischievous prank unfold." },
                 { word: "surrounded", sentence: "The robber found himself quickly surrounded by the police." },
                 { word: "yelped in pain", sentence: "The poor dog yelped in pain as it was struck by a falling branch." },
-                { word: "forlonly", sentence: "The lost child stoof forlonly in the middle of the shopping mall." },
+                { word: "forlornly", sentence: "The lost child stood forlornly in the middle of the shopping mall." },
                 { word: "rowdy", sentence: "There was a rowdy gang of youths milling about at the void deck." },
                 { word: "hesitant", sentence: "We were hesitant about spending so much money on a single meal." },
                 { word: "stationery", sentence: "I bought a new set of stationery from the bookshop at the start of the term." }
@@ -108,11 +110,11 @@
             
             utterance.onstart = () => {
                 state.isSpeaking = true;
-                updateAudioButton();
+                updateAudioButtonUI();
             };
             utterance.onend = () => {
                 state.isSpeaking = false;
-                updateAudioButton();
+                updateAudioButtonUI();
             };
             
             window.speechSynthesis.speak(utterance);
@@ -131,7 +133,7 @@
         function handleDictationSpeak(item) {
             if (!item) return;
             if (state.dictationMode === 'word') {
-                const fullPrompt = `${item.sentence}. Spell... ${item.word}?`;
+                const fullPrompt = `${item.sentence}. Spell... ${item.word}.`;
                 speak(fullPrompt);
             } else {
                 const punctuatedSentence = getSentenceWithPunctuation(item.sentence);
@@ -139,7 +141,7 @@
             }
         }
 
-        // Navigation & Logic
+        // Navigation
         function selectLesson(lessonName) {
             setState({
                 currentLesson: lessonName,
@@ -171,13 +173,13 @@
             }
         }
 
-        // UI Updates for Audio Animation
-        function updateAudioButton() {
+        // Dedicated UI Update for the Active Audio Button
+        function updateAudioButtonUI() {
             const btn = document.getElementById('audio-trigger-btn');
             if (!btn) return;
             
             if (state.isSpeaking) {
-                btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-100 scale-110 shadow-inner";
+                btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-100 scale-105 shadow-inner ring-8 ring-indigo-50";
                 btn.innerHTML = `
                     <div class="flex gap-1.5 items-end h-12">
                         <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 60%; animation-delay: 0ms"></div>
@@ -186,13 +188,13 @@
                     </div>
                 `;
             } else {
-                btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-600 shadow-xl shadow-indigo-200 active:scale-90";
+                btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-600 shadow-xl shadow-indigo-200 active:scale-95 hover:bg-indigo-700";
                 btn.innerHTML = `<i data-lucide="volume-2" class="w-16 h-16 text-white"></i>`;
                 lucide.createIcons();
             }
         }
 
-        // Rendering Engine
+        // Main Rendering Logic
         function render() {
             const app = document.getElementById('app');
             
@@ -202,7 +204,7 @@
                         <div class="text-center mb-12">
                             <div class="relative w-40 h-40 mx-auto mb-8 flex items-center justify-center">
                                 <div class="w-full h-full rounded-3xl overflow-hidden shadow-xl bg-white flex items-center justify-center border-4 border-indigo-50">
-                                    <img src="vpslogo.jpeg" alt="Logo" class="max-w-full max-h-full object-contain" 
+                                    <img src="vpslogo.jpeg" alt="VPS Logo" class="max-w-full max-h-full object-contain" 
                                          onerror="this.src='https://via.placeholder.com/225?text=VPS+Dictation'">
                                 </div>
                                 <div class="absolute -bottom-2 -right-2 bg-yellow-400 text-indigo-900 text-xs font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-tight ring-4 ring-white">P5</div>
@@ -210,7 +212,7 @@
                             <h1 class="text-5xl font-black text-slate-800 mb-3 leading-tight tracking-tight">VPS English Dictation</h1>
                             <p class="text-slate-500 text-lg px-4 leading-relaxed">The ultimate companion for your weekly spelling and sentence practice.</p>
                         </div>
-                        <button onclick="setState({view: 'lessons'})" class="w-full bg-indigo-600 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                        <button onclick="setState({view: 'lessons'})" class="w-full bg-indigo-600 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-indigo-700">
                             Start Practice <i data-lucide="arrow-right"></i>
                         </button>
                         <div class="mt-12 text-center">
@@ -288,7 +290,7 @@
                             `).join('')}
                         </div>
 
-                        <button onclick="startLesson()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                        <button onclick="startLesson()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-indigo-700">
                             Start Dictation <i data-lucide="play" class="fill-current w-6 h-6"></i>
                         </button>
                     </div>
@@ -311,7 +313,7 @@
                                 <select onchange="setState({speed: parseFloat(this.value)})" class="bg-transparent text-[11px] font-black text-indigo-600 outline-none cursor-pointer pr-4 appearance-none z-10">
                                     <option value="0.5" ${state.speed === 0.5 ? 'selected' : ''}>0.5x</option>
                                     <option value="0.8" ${state.speed === 0.8 ? 'selected' : ''}>0.8x</option>
-                                    <option value="1" ${state.speed === 1 ? 'selected' : ''}>1.0x</option>
+                                    <option value="1.0" ${state.speed === 1.0 ? 'selected' : ''}>1.0x</option>
                                 </select>
                                 <i data-lucide="chevron-down" class="absolute right-2 text-indigo-400 pointer-events-none w-2.5 h-2.5"></i>
                             </div>
@@ -324,20 +326,20 @@
                             <div class="flex-1 flex flex-col items-center justify-center py-6">
                                 <button id="audio-trigger-btn" onclick="handleDictationSpeak(state.words[state.currentIndex])"></button>
                                 <p class="mt-8 text-slate-400 font-bold uppercase tracking-widest text-[10px] text-center px-8">
-                                    ${state.dictationMode === 'word' ? 'Tap for sentence & word' : 'Tap for sentence with punctuations'}
+                                    ${state.dictationMode === 'word' ? 'Tap for sentence & word' : 'Tap for punctuated sentence'}
                                 </p>
                             </div>
                             <div class="pb-12">
-                                <button onclick="nextWord()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-bold text-xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-slate-200">
+                                <button onclick="nextWord()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-bold text-xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-slate-200 hover:bg-black">
                                     ${state.currentIndex < state.words.length - 1 ? 
                                         `Next Item <i data-lucide="arrow-right"></i>` : 
-                                        `Finish & Check Results <i data-lucide="check-circle-2"></i>`}
+                                        `Finish & Results <i data-lucide="check-circle-2"></i>`}
                                 </button>
                             </div>
                         </div>
                     </div>
                 `;
-                updateAudioButton();
+                updateAudioButtonUI();
             } else if (state.view === 'result') {
                 app.innerHTML = `
                     <div class="min-h-screen flex flex-col p-6 bg-slate-50 fade-in">
@@ -355,7 +357,7 @@
                                         <div class="flex items-center gap-4 p-4">
                                             <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">${idx + 1}</span>
                                             <span class="text-xl font-black text-slate-800">${item.word}</span>
-                                            <button onclick="speak('${item.word}')" class="ml-auto text-indigo-300"><i data-lucide="volume-2" class="w-4.5 h-4.5"></i></button>
+                                            <button onclick="speak('${item.word}')" class="ml-auto text-indigo-300 hover:text-indigo-600"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
                                         </div>
                                         ${state.dictationMode === 'sentence' ? `
                                             <div class="px-4 pb-4">
