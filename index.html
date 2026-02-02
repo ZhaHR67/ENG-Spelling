@@ -1,38 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VPS Dictation Master</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @keyframes bounceCustom {
-            0%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(0.4); }
-        }
-        .animate-bounce-custom {
-            animation: bounceCustom 1s infinite;
-        }
-        .fade-in {
-            animation: fadeIn 0.4s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* Remove default blue highlight on mobile tap */
-        * { -webkit-tap-highlight-color: transparent; }
-    </style>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>VPS Dictation Master</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://unpkg.com/lucide@latest"></script>
+   <style>
+       @keyframes bounceCustom {
+           0%, 100% { transform: scaleY(1); }
+           50% { transform: scaleY(0.4); }
+       }
+       .animate-bounce-custom {
+           animation: bounceCustom 1s infinite;
+       }
+       .fade-in {
+           animation: fadeIn 0.4s ease-out;
+       }
+       @keyframes fadeIn {
+           from { opacity: 0; transform: translateY(8px); }
+           to { opacity: 1; transform: translateY(0); }
+       }
+       * { -webkit-tap-highlight-color: transparent; }
+      
+       /* Custom scrollbar for better mobile appearance */
+       .custom-scroll::-webkit-scrollbar { width: 4px; }
+       .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+       .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+   </style>
 </head>
 <body class="bg-white md:bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden min-h-screen">
 
-    <div id="app"></div>
 
-    <script>
-        // Organized Lesson Data
-        const P5_LESSONS = {
-            "Spelling 1 (Unit 1)": [
+   <div id="app"></div>
+
+
+   <script>
+       // Data Definitions
+       const P5_SPELLING = {
+           "Spelling 1 (Unit 1)": [
                 { word: "protested", sentence: "It wasn't my fault! protested Lucy." },
                 { word: "dreaded", sentence: "The dreaded moment for us to leave has arrived." },
                 { word: "constantly", sentence: "Mother constantly reminds us to clean our rooms." },
@@ -82,311 +88,392 @@
             ]
         };
 
-        // State Management
-        let state = {
-            view: 'home',
-            currentLesson: null,
-            words: [],
-            currentIndex: 0,
-            speed: 0.8,
-            isSpeaking: false,
-            isShuffle: true,
-            dictationMode: 'word' // 'word' or 'sentence'
-        };
 
-        function setState(newState) {
-            state = { ...state, ...newState };
-            render();
-        }
+       const P5_DICTATION = {
+           "Dictation 1 (Unit 1)": [
+               "It was a scorching afternoon.",
+               "The sun beat down mercilessly on the parched earth.",
+               "Tired and thirsty, we trudged along the dusty path.",
+               "Suddenly, we heard a rustle in the nearby bushes."
+           ],
+           "Dictation 2 (Unit 2)": [
+               "The old man lived in a quaint cottage by the sea.",
+               "He spent his days reading books and tending to his garden.",
+               "Everyone in the village knew him for his kind heart.",
+               "One day, a mysterious stranger appeared at his door."
+           ]
+       };
 
-        // Speech Logic
-        function speak(text) {
-            if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = state.speed;
-            utterance.lang = 'en-US';
-            
-            utterance.onstart = () => {
-                state.isSpeaking = true;
-                updateAudioButtonUI();
-            };
-            utterance.onend = () => {
-                state.isSpeaking = false;
-                updateAudioButtonUI();
-            };
-            
-            window.speechSynthesis.speak(utterance);
-        }
 
-        function getSentenceWithPunctuation(str) {
-            return str
-                .replace(/\./g, ' full stop')
-                .replace(/,/g, ' comma')
-                .replace(/!/g, ' exclamation mark')
-                .replace(/\?/g, ' question mark')
-                .replace(/;/g, ' semi-colon')
-                .replace(/:/g, ' colon');
-        }
+       // State Management
+       let state = {
+           view: 'home',
+           activeTab: 'spelling', // 'spelling' or 'dictation'
+           currentLesson: null,
+           items: [], // Words or Sentences
+           currentIndex: 0,
+           speed: 0.8,
+           isSpeaking: false,
+           isShuffle: false,
+           dictationMode: 'word' // For Spelling: 'word' or 'sentence'
+       };
 
-        function handleDictationSpeak(item) {
-            if (!item) return;
-            if (state.dictationMode === 'word') {
-                const fullPrompt = `${item.sentence}. Spell... ${item.word}.`;
-                speak(fullPrompt);
-            } else {
-                const punctuatedSentence = getSentenceWithPunctuation(item.sentence);
-                speak(punctuatedSentence);
-            }
-        }
 
-        // Navigation
-        function selectLesson(lessonName) {
-            setState({
-                currentLesson: lessonName,
-                words: P5_LESSONS[lessonName],
-                view: 'preview'
-            });
-        }
+       function setState(newState) {
+           state = { ...state, ...newState };
+           render();
+       }
 
-        function startLesson() {
-            let finalWords = [...P5_LESSONS[state.currentLesson]];
-            if (state.isShuffle) {
-                finalWords = finalWords.sort(() => Math.random() - 0.5);
-            }
-            setState({
-                words: finalWords,
-                currentIndex: 0,
-                view: 'practice'
-            });
-            setTimeout(() => handleDictationSpeak(finalWords[0]), 600);
-        }
 
-        function nextWord() {
-            if (state.currentIndex < state.words.length - 1) {
-                const nextIdx = state.currentIndex + 1;
-                setState({ currentIndex: nextIdx });
-                handleDictationSpeak(state.words[nextIdx]);
-            } else {
-                setState({ view: 'result' });
-            }
-        }
+       // Speech Logic
+       function speak(text, callback) {
+           if (!window.speechSynthesis) return;
+           window.speechSynthesis.cancel();
+          
+           const utterance = new SpeechSynthesisUtterance(text);
+           utterance.rate = state.speed;
+           utterance.lang = 'en-US';
+          
+           utterance.onstart = () => {
+               state.isSpeaking = true;
+               updateAudioButtonUI();
+           };
+           utterance.onend = () => {
+               state.isSpeaking = false;
+               updateAudioButtonUI();
+               if (callback) callback();
+           };
+          
+           window.speechSynthesis.speak(utterance);
+       }
 
-        // Dedicated UI Update for the Active Audio Button
-        function updateAudioButtonUI() {
-            const btn = document.getElementById('audio-trigger-btn');
-            if (!btn) return;
-            
-            if (state.isSpeaking) {
-                btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-100 scale-105 shadow-inner ring-8 ring-indigo-50";
-                btn.innerHTML = `
-                    <div class="flex gap-1.5 items-end h-12">
-                        <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 60%; animation-delay: 0ms"></div>
-                        <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 100%; animation-delay: 200ms"></div>
-                        <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 70%; animation-delay: 400ms"></div>
-                    </div>
-                `;
-            } else {
-                btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-600 shadow-xl shadow-indigo-200 active:scale-95 hover:bg-indigo-700";
-                btn.innerHTML = `<i data-lucide="volume-2" class="w-16 h-16 text-white"></i>`;
-                lucide.createIcons();
-            }
-        }
 
-        // Main Rendering Logic
-        function render() {
-            const app = document.getElementById('app');
-            
-            if (state.view === 'home') {
-                app.innerHTML = `
-                    <div class="flex flex-col min-h-screen p-6 fade-in max-w-lg mx-auto justify-center">
-                        <div class="text-center mb-12">
-                            <div class="relative w-40 h-40 mx-auto mb-8 flex items-center justify-center">
-                                <div class="w-full h-full rounded-3xl overflow-hidden shadow-xl bg-white flex items-center justify-center border-4 border-indigo-50">
-                                    <img src="vpslogo.jpeg" alt="VPS Logo" class="max-w-full max-h-full object-contain" 
-                                         onerror="this.src='https://via.placeholder.com/225?text=VPS+Dictation'">
-                                </div>
-                                <div class="absolute -bottom-2 -right-2 bg-yellow-400 text-indigo-900 text-xs font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-tight ring-4 ring-white">P5</div>
-                            </div>
-                            <h1 class="text-5xl font-black text-slate-800 mb-3 leading-tight tracking-tight">VPS English Dictation</h1>
-                            <p class="text-slate-500 text-lg px-4 leading-relaxed">The ultimate companion for your weekly spelling and sentence practice.</p>
-                        </div>
-                        <button onclick="setState({view: 'lessons'})" class="w-full bg-indigo-600 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-indigo-700">
-                            Start Practice <i data-lucide="arrow-right"></i>
-                        </button>
-                        <div class="mt-12 text-center">
-                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Prepare paper & pen</p>
-                        </div>
-                    </div>
-                `;
-            } else if (state.view === 'lessons') {
-                app.innerHTML = `
-                    <div class="flex flex-col min-h-screen p-6 fade-in max-w-lg mx-auto">
-                        <div class="flex items-center gap-4 mb-8">
-                            <button onclick="setState({view: 'home'})" class="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-colors">
-                                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                            </button>
-                            <h2 class="text-2xl font-black text-slate-800">Select Lesson</h2>
-                        </div>
-                        <div class="grid gap-4">
-                            ${Object.keys(P5_LESSONS).map(lesson => `
-                                <button onclick="selectLesson('${lesson}')" class="w-full bg-white border-2 border-slate-100 p-6 rounded-2xl flex items-center justify-between group active:border-indigo-500 active:bg-indigo-50 transition-all shadow-sm">
-                                    <div class="text-left">
-                                        <div class="font-black text-slate-800 text-lg">${lesson}</div>
-                                        <div class="text-slate-400 text-sm font-medium">${P5_LESSONS[lesson].length} Items</div>
-                                    </div>
-                                    <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-active:bg-indigo-600 group-active:text-white transition-colors">
-                                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                                    </div>
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            } else if (state.view === 'preview') {
-                app.innerHTML = `
-                    <div class="flex flex-col min-h-screen p-6 fade-in max-w-lg mx-auto">
-                        <div class="flex items-center gap-4 mb-8">
-                            <button onclick="setState({view: 'lessons'})" class="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-colors">
-                                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                            </button>
-                            <div>
-                                <h2 class="text-2xl font-black text-slate-800">${state.currentLesson}</h2>
-                                <p class="text-slate-400 font-medium text-sm">Review words & sentences</p>
-                            </div>
-                        </div>
+       function getPunctuatedText(str) {
+           return str
+               .replace(/\./g, ' full stop')
+               .replace(/,/g, ' comma')
+               .replace(/!/g, ' exclamation mark')
+               .replace(/\?/g, ' question mark')
+               .replace(/;/g, ' semi-colon')
+               .replace(/:/g, ' colon');
+       }
 
-                        <div class="space-y-3 mb-6">
-                            <div class="flex bg-slate-100 p-1 rounded-2xl">
-                                <button onclick="setState({isShuffle: false})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${!state.isShuffle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
-                                    <i data-lucide="list-filter" class="w-4 h-4"></i> In Order
-                                </button>
-                                <button onclick="setState({isShuffle: true})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${state.isShuffle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
-                                    <i data-lucide="shuffle" class="w-4 h-4"></i> Shuffle
-                                </button>
-                            </div>
-                            <div class="flex bg-slate-100 p-1 rounded-2xl">
-                                <button onclick="setState({dictationMode: 'word'})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${state.dictationMode === 'word' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
-                                    <i data-lucide="type" class="w-4 h-4"></i> Word Mode
-                                </button>
-                                <button onclick="setState({dictationMode: 'sentence'})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${state.dictationMode === 'sentence' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
-                                    <i data-lucide="align-left" class="w-4 h-4"></i> Sentence Mode
-                                </button>
-                            </div>
-                        </div>
 
-                        <div class="flex-1 overflow-y-auto mb-6 pr-1 space-y-4">
-                            ${P5_LESSONS[state.currentLesson].map((item, idx) => `
-                                <div class="bg-white border-2 border-slate-50 p-5 rounded-2xl shadow-sm">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="text-indigo-600 font-black text-lg">${item.word}</span>
-                                        <button onclick="speak('${item.word}')" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg active:scale-90 transition-transform">
-                                            <i data-lucide="volume-2" class="w-4 h-4"></i>
-                                        </button>
-                                    </div>
-                                    <p class="text-slate-500 text-sm italic leading-relaxed">"${item.sentence}"</p>
-                                </div>
-                            `).join('')}
-                        </div>
+       function handleAudioClick() {
+           const currentItem = state.items[state.currentIndex];
+           if (!currentItem) return;
 
-                        <button onclick="startLesson()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-indigo-700">
-                            Start Dictation <i data-lucide="play" class="fill-current w-6 h-6"></i>
-                        </button>
-                    </div>
-                `;
-            } else if (state.view === 'practice') {
-                app.innerHTML = `
-                    <div class="flex flex-col min-h-screen bg-white md:bg-slate-50">
-                        <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-4 flex justify-between items-center border-b border-slate-100">
-                            <button onclick="setState({view: 'preview'})" class="p-2 text-slate-400 hover:text-slate-800 transition-colors">
-                                <i data-lucide="arrow-left" class="w-6 h-6"></i>
-                            </button>
-                            <div class="flex flex-col items-center text-center px-2 flex-1 min-w-0">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate w-full px-2">
-                                    ${state.currentLesson} • ${state.dictationMode === 'word' ? 'Word' : 'Sentence'}
-                                </span>
-                                <span class="text-sm font-black text-slate-800">Item ${state.currentIndex + 1} of ${state.words.length}</span>
-                            </div>
-                            <div class="flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-1.5 rounded-xl shadow-sm relative">
-                                <i data-lucide="gauge" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                                <select onchange="setState({speed: parseFloat(this.value)})" class="bg-transparent text-[11px] font-black text-indigo-600 outline-none cursor-pointer pr-4 appearance-none z-10">
-                                    <option value="0.5" ${state.speed === 0.5 ? 'selected' : ''}>0.5x</option>
-                                    <option value="0.8" ${state.speed === 0.8 ? 'selected' : ''}>0.8x</option>
-                                    <option value="1.0" ${state.speed === 1.0 ? 'selected' : ''}>1.0x</option>
-                                </select>
-                                <i data-lucide="chevron-down" class="absolute right-2 text-indigo-400 pointer-events-none w-2.5 h-2.5"></i>
-                            </div>
-                        </div>
 
-                        <div class="flex-1 flex flex-col p-6 max-w-lg mx-auto w-full">
-                            <div class="text-center mt-4 mb-2 opacity-60">
-                                <p class="text-indigo-600 font-bold text-sm uppercase tracking-tighter">Writing on paper...</p>
-                            </div>
-                            <div class="flex-1 flex flex-col items-center justify-center py-6">
-                                <button id="audio-trigger-btn" onclick="handleDictationSpeak(state.words[state.currentIndex])"></button>
-                                <p class="mt-8 text-slate-400 font-bold uppercase tracking-widest text-[10px] text-center px-8">
-                                    ${state.dictationMode === 'word' ? 'Tap for sentence & word' : 'Tap for punctuated sentence'}
-                                </p>
-                            </div>
-                            <div class="pb-12">
-                                <button onclick="nextWord()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-bold text-xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-slate-200 hover:bg-black">
-                                    ${state.currentIndex < state.words.length - 1 ? 
-                                        `Next Item <i data-lucide="arrow-right"></i>` : 
-                                        `Finish & Results <i data-lucide="check-circle-2"></i>`}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                updateAudioButtonUI();
-            } else if (state.view === 'result') {
-                app.innerHTML = `
-                    <div class="min-h-screen flex flex-col p-6 bg-slate-50 fade-in">
-                        <div class="w-full max-w-lg mx-auto bg-white rounded-[2.5rem] shadow-2xl p-8 border border-white flex-1 flex flex-col">
-                            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                <i data-lucide="file-text" class="w-8 h-8"></i>
-                            </div>
-                            <div class="text-center mb-8">
-                                <h2 class="text-3xl font-black text-slate-800 mb-1">Answer Key</h2>
-                                <p class="text-slate-400 font-medium">Check your paper spelling against the list below.</p>
-                            </div>
-                            <div class="flex-1 overflow-y-auto pr-1 space-y-3 mb-8">
-                                ${state.words.map((item, idx) => `
-                                    <div class="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
-                                        <div class="flex items-center gap-4 p-4">
-                                            <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">${idx + 1}</span>
-                                            <span class="text-xl font-black text-slate-800">${item.word}</span>
-                                            <button onclick="speak('${item.word}')" class="ml-auto text-indigo-300 hover:text-indigo-600"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
-                                        </div>
-                                        ${state.dictationMode === 'sentence' ? `
-                                            <div class="px-4 pb-4">
-                                                <p class="text-xs text-slate-500 italic border-t border-slate-200 pt-2 leading-relaxed">"${item.sentence}"</p>
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <div class="space-y-3">
-                                <button onclick="startLesson()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100">
-                                    Try This Lesson Again
-                                </button>
-                                <button onclick="setState({view: 'lessons'})" class="w-full bg-white text-slate-500 py-4 rounded-2xl font-bold text-lg border border-slate-200 active:bg-slate-50 transition-all">
-                                    Back to Lessons
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            lucide.createIcons();
-        }
+           if (state.activeTab === 'dictation') {
+               // Dictation Mode Logic
+               const sentence = currentItem;
+               const punctuatedSentence = getPunctuatedText(sentence);
+              
+               // 1. Read sentence with punctuation
+               speak(punctuatedSentence, () => {
+                   // 2. Then spell the whole sentence (characters)
+                   // We use a slightly faster rate for spelling to keep it moving
+                   const spellingText = sentence.split('').join(' ');
+                   // Small delay before spelling
+                   setTimeout(() => {
+                       const spellUtterance = new SpeechSynthesisUtterance("Now I will spell it. " + spellingText);
+                       spellUtterance.rate = state.speed + 0.2;
+                       spellUtterance.onstart = () => { state.isSpeaking = true; updateAudioButtonUI(); };
+                       spellUtterance.onend = () => { state.isSpeaking = false; updateAudioButtonUI(); };
+                       window.speechSynthesis.speak(spellUtterance);
+                   }, 500);
+               });
+           } else {
+               // Spelling Mode Logic
+               if (state.dictationMode === 'word') {
+                   speak(`${currentItem.sentence}. Spell... ${currentItem.word}.`);
+               } else {
+                   // Natural sentence reading (no punctuation pronounced as per instruction)
+                   speak(currentItem.sentence);
+               }
+           }
+       }
 
-        // Initialize App
-        window.onload = () => {
-            render();
-        };
-    </script>
+
+       // Navigation
+       function selectLesson(lessonName) {
+           const source = state.activeTab === 'spelling' ? P5_SPELLING : P5_DICTATION;
+           setState({
+               currentLesson: lessonName,
+               items: source[lessonName],
+               view: 'preview'
+           });
+       }
+
+
+       function startLesson() {
+           const source = state.activeTab === 'spelling' ? P5_SPELLING : P5_DICTATION;
+           let finalItems = [...source[state.currentLesson]];
+           if (state.isShuffle) {
+               finalItems = finalItems.sort(() => Math.random() - 0.5);
+           }
+           setState({
+               items: finalItems,
+               currentIndex: 0,
+               view: 'practice'
+           });
+           setTimeout(handleAudioClick, 600);
+       }
+
+
+       function nextItem() {
+           if (state.currentIndex < state.items.length - 1) {
+               const nextIdx = state.currentIndex + 1;
+               setState({ currentIndex: nextIdx });
+               handleAudioClick();
+           } else {
+               setState({ view: 'result' });
+           }
+       }
+
+
+       function updateAudioButtonUI() {
+           const btn = document.getElementById('audio-trigger-btn');
+           if (!btn) return;
+           if (state.isSpeaking) {
+               btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-100 scale-105 shadow-inner ring-8 ring-indigo-50";
+               btn.innerHTML = `
+                   <div class="flex gap-1.5 items-end h-12">
+                       <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 60%;"></div>
+                       <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 100%; animation-delay: 200ms"></div>
+                       <div class="w-2 bg-indigo-600 rounded-full animate-bounce-custom" style="height: 70%; animation-delay: 400ms"></div>
+                   </div>
+               `;
+           } else {
+               btn.className = "relative w-40 h-40 rounded-full flex items-center justify-center transition-all bg-indigo-600 shadow-xl shadow-indigo-200 active:scale-95 hover:bg-indigo-700";
+               btn.innerHTML = `<i data-lucide="volume-2" class="w-16 h-16 text-white"></i>`;
+               if (window.lucide) lucide.createIcons();
+           }
+       }
+
+
+       // View Renders
+       function render() {
+           const app = document.getElementById('app');
+          
+           if (state.view === 'home') {
+               app.innerHTML = `
+                   <div class="flex flex-col min-h-screen p-6 fade-in max-w-lg mx-auto justify-center">
+                       <div class="text-center mb-12">
+                           <div class="relative w-40 h-40 mx-auto mb-8 flex items-center justify-center">
+                               <div class="w-full h-full rounded-3xl overflow-hidden shadow-xl bg-white flex items-center justify-center border-4 border-indigo-50">
+                                   <img src="vpslogo.jpeg" alt="Logo" class="max-w-full max-h-full object-contain"
+                                        onerror="this.src='https://via.placeholder.com/225?text=VPS+Dictation'">
+                               </div>
+                               <div class="absolute -bottom-2 -right-2 bg-yellow-400 text-indigo-900 text-xs font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-tight ring-4 ring-white">P5</div>
+                           </div>
+                           <h1 class="text-4xl font-black text-slate-800 mb-3 leading-tight tracking-tight">VPS English Practice</h1>
+                           <p class="text-slate-500 text-lg px-4 leading-relaxed">Prepare for your weekly Spelling and Dictation tests on paper.</p>
+                       </div>
+                      
+                       <button onclick="setState({view: 'lessons'})" class="w-full bg-indigo-600 text-white py-5 rounded-3xl font-bold text-xl shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-indigo-700 mb-8">
+                           Start Practice <i data-lucide="arrow-right"></i>
+                       </button>
+                      
+                       <div class="text-center space-y-4">
+                           <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Prepare paper & pen</p>
+                           <p class="text-xs text-slate-400 italic px-8">Note: Spelling words may differ from the words listed</p>
+                       </div>
+                   </div>
+               `;
+           } else if (state.view === 'lessons') {
+               const lessonsToDisplay = state.activeTab === 'spelling' ? P5_SPELLING : P5_DICTATION;
+               app.innerHTML = `
+                   <div class="flex flex-col min-h-screen p-6 fade-in max-w-lg mx-auto">
+                       <div class="flex items-center gap-4 mb-6">
+                           <button onclick="setState({view: 'home'})" class="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600">
+                               <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                           </button>
+                           <h2 class="text-2xl font-black text-slate-800">Select List</h2>
+                       </div>
+
+
+                       <!-- Tab Header -->
+                       <div class="flex bg-slate-200 p-1 rounded-2xl mb-6">
+                           <button onclick="setState({activeTab: 'spelling'})" class="flex-1 py-3 rounded-xl font-bold text-sm transition-all ${state.activeTab === 'spelling' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
+                               Spelling
+                           </button>
+                           <button onclick="setState({activeTab: 'dictation'})" class="flex-1 py-3 rounded-xl font-bold text-sm transition-all ${state.activeTab === 'dictation' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
+                               Dictation
+                           </button>
+                       </div>
+
+
+                       <div class="grid gap-4">
+                           ${Object.keys(lessonsToDisplay).map(lesson => `
+                               <button onclick="selectLesson('${lesson}')" class="w-full bg-white border-2 border-slate-100 p-6 rounded-2xl flex items-center justify-between group active:border-indigo-500 transition-all shadow-sm">
+                                   <div class="text-left">
+                                       <div class="font-black text-slate-800 text-lg">${lesson}</div>
+                                       <div class="text-slate-400 text-xs font-medium uppercase tracking-wider">${lessonsToDisplay[lesson].length} Items</div>
+                                   </div>
+                                   <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i>
+                               </button>
+                           `).join('')}
+                       </div>
+                   </div>
+               `;
+           } else if (state.view === 'preview') {
+               app.innerHTML = `
+                   <div class="flex flex-col min-h-screen p-6 fade-in max-w-lg mx-auto">
+                       <div class="flex items-center gap-4 mb-6">
+                           <button onclick="setState({view: 'lessons'})" class="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600">
+                               <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                           </button>
+                           <div>
+                               <h2 class="text-2xl font-black text-slate-800">${state.currentLesson}</h2>
+                               <p class="text-slate-400 font-medium text-xs uppercase tracking-widest">${state.activeTab} Preview</p>
+                           </div>
+                       </div>
+
+
+                       <div class="space-y-3 mb-6">
+                           <div class="flex bg-slate-100 p-1 rounded-2xl">
+                               <button onclick="setState({isShuffle: false})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${!state.isShuffle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
+                                   <i data-lucide="list-filter" class="w-4 h-4"></i> In Order
+                               </button>
+                               <button onclick="setState({isShuffle: true})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${state.isShuffle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
+                                   <i data-lucide="shuffle" class="w-4 h-4"></i> Shuffle
+                               </button>
+                           </div>
+                          
+                           ${state.activeTab === 'spelling' ? `
+                               <div class="flex bg-slate-100 p-1 rounded-2xl">
+                                   <button onclick="setState({dictationMode: 'word'})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${state.dictationMode === 'word' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
+                                       <i data-lucide="type" class="w-4 h-4"></i> Word Mode
+                                   </button>
+                                   <button onclick="setState({dictationMode: 'sentence'})" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${state.dictationMode === 'sentence' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}">
+                                       <i data-lucide="align-left" class="w-4 h-4"></i> Sentence Mode
+                                   </button>
+                               </div>
+                           ` : ''}
+                       </div>
+
+
+                       <div class="flex-1 overflow-y-auto mb-6 pr-1 space-y-4 custom-scroll">
+                           ${state.items.map((item, idx) => `
+                               <div class="bg-white border-2 border-slate-50 p-5 rounded-2xl shadow-sm">
+                                   <div class="flex items-center justify-between mb-2">
+                                       <span class="text-indigo-600 font-black text-lg">
+                                           ${state.activeTab === 'spelling' ? item.word : `Sentence ${idx + 1}`}
+                                       </span>
+                                       <button onclick="speak('${state.activeTab === 'spelling' ? item.word : item}')" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg active:scale-90">
+                                           <i data-lucide="volume-2" class="w-4 h-4"></i>
+                                       </button>
+                                   </div>
+                                   <p class="text-slate-500 text-sm italic leading-relaxed">
+                                       "${state.activeTab === 'spelling' ? item.sentence : item}"
+                                   </p>
+                               </div>
+                           `).join('')}
+                       </div>
+
+
+                       <button onclick="startLesson()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-indigo-700">
+                           Start Dictation <i data-lucide="play" class="fill-current w-6 h-6"></i>
+                       </button>
+                   </div>
+               `;
+           } else if (state.view === 'practice') {
+               app.innerHTML = `
+                   <div class="flex flex-col min-h-screen bg-white md:bg-slate-50">
+                       <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-4 flex justify-between items-center border-b border-slate-100">
+                           <button onclick="setState({view: 'preview'})" class="p-2 text-slate-400 hover:text-slate-800">
+                               <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                           </button>
+                           <div class="flex flex-col items-center text-center px-2 flex-1 min-w-0">
+                               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate w-full px-2">
+                                   ${state.currentLesson} • ${state.activeTab === 'spelling' ? (state.dictationMode === 'word' ? 'Word' : 'Sentence') : 'Dictation'}
+                               </span>
+                               <span class="text-sm font-black text-slate-800">Item ${state.currentIndex + 1} of ${state.items.length}</span>
+                           </div>
+                           <div class="flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-1.5 rounded-xl shadow-sm relative">
+                               <i data-lucide="gauge" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                               <select onchange="setState({speed: parseFloat(this.value)})" class="bg-transparent text-[11px] font-black text-indigo-600 outline-none cursor-pointer pr-4 appearance-none z-10">
+                                   <option value="0.5" ${state.speed === 0.5 ? 'selected' : ''}>0.5x</option>
+                                   <option value="0.8" ${state.speed === 0.8 ? 'selected' : ''}>0.8x</option>
+                                   <option value="1.0" ${state.speed === 1.0 ? 'selected' : ''}>1.0x</option>
+                               </select>
+                               <i data-lucide="chevron-down" class="absolute right-2 text-indigo-400 pointer-events-none w-2.5 h-2.5"></i>
+                           </div>
+                       </div>
+
+
+                       <div class="flex-1 flex flex-col p-6 max-w-lg mx-auto w-full">
+                           <div class="text-center mt-4 mb-2 opacity-60">
+                               <p class="text-indigo-600 font-bold text-sm uppercase tracking-tighter">Writing on paper...</p>
+                           </div>
+                           <div class="flex-1 flex flex-col items-center justify-center py-6">
+                               <button id="audio-trigger-btn" onclick="handleAudioClick()"></button>
+                               <p class="mt-8 text-slate-400 font-bold uppercase tracking-widest text-[10px] text-center px-8">
+                                   ${state.activeTab === 'dictation' ?
+                                       'Read with punctuation & Spelled out' :
+                                       (state.dictationMode === 'word' ? 'Tap for sentence & word' : 'Tap for natural sentence')}
+                               </p>
+                           </div>
+                           <div class="pb-12">
+                               <button onclick="nextItem()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-bold text-xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-slate-200 hover:bg-black">
+                                   ${state.currentIndex < state.items.length - 1 ?
+                                       `Next Item <i data-lucide="arrow-right"></i>` :
+                                       `Finish & Results <i data-lucide="check-circle-2"></i>`}
+                               </button>
+                           </div>
+                       </div>
+                   </div>
+               `;
+               updateAudioButtonUI();
+           } else if (state.view === 'result') {
+               app.innerHTML = `
+                   <div class="min-h-screen flex flex-col p-6 bg-slate-50 fade-in">
+                       <div class="w-full max-w-lg mx-auto bg-white rounded-[2.5rem] shadow-2xl p-8 border border-white flex-1 flex flex-col">
+                           <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                               <i data-lucide="file-text" class="w-8 h-8"></i>
+                           </div>
+                           <div class="text-center mb-8">
+                               <h2 class="text-3xl font-black text-slate-800 mb-1">Answer Key</h2>
+                               <p class="text-slate-400 font-medium">Check your paper against the list below.</p>
+                           </div>
+                           <div class="flex-1 overflow-y-auto pr-1 space-y-3 mb-8 custom-scroll">
+                               ${state.items.map((item, idx) => `
+                                   <div class="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+                                       <div class="flex items-center gap-4 p-4">
+                                           <span class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">${idx + 1}</span>
+                                           <span class="text-xl font-black text-slate-800">
+                                               ${state.activeTab === 'spelling' ? item.word : `Sentence ${idx+1}`}
+                                           </span>
+                                           <button onclick="speak('${state.activeTab === 'spelling' ? item.word : item}')" class="ml-auto text-indigo-300 hover:text-indigo-600">
+                                               <i data-lucide="volume-2" class="w-5 h-5"></i>
+                                           </button>
+                                       </div>
+                                       <div class="px-4 pb-4">
+                                           <p class="text-xs text-slate-500 italic border-t border-slate-200 pt-2 leading-relaxed">
+                                               "${state.activeTab === 'spelling' ? item.sentence : item}"
+                                           </p>
+                                       </div>
+                                   </div>
+                               `).join('')}
+                           </div>
+                           <div class="space-y-3">
+                               <button onclick="startLesson()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all">
+                                   Try Again
+                               </button>
+                               <button onclick="setState({view: 'lessons'})" class="w-full bg-white text-slate-500 py-4 rounded-2xl font-bold text-lg border border-slate-200 active:bg-slate-50 transition-all">
+                                   Back to Lessons
+                               </button>
+                           </div>
+                       </div>
+                   </div>
+               `;
+           }
+           if (window.lucide) lucide.createIcons();
+       }
+
+
+       window.onload = render;
+   </script>
 </body>
 </html>
